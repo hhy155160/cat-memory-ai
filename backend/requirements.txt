@@ -1,0 +1,14 @@
+# Web 框架
+fastapi
+# ASGI 服务器
+uvicorn[standard]
+# 向量数据库（记忆检索）
+chromadb
+# OpenAI SDK（DeepSeek 兼容 OpenAI 协议，直接复用）
+openai
+# 文件上传（multipart/form-data）
+python-multipart
+# 图片合法性校验
+pillow
+# 读取 .env 配置
+python-dotenv
