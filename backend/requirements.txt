@@ -10,5 +10,8 @@ openai
 python-multipart
 # 图片合法性校验
 pillow
+exifread
 # 读取 .env 配置
 python-dotenv
+# 测试（开发用）
+pytest

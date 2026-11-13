@@ -9,6 +9,7 @@ chroma_db/
 
 # Python 缓存
 __pycache__/
+.pytest_cache/
 
 # 用户上传的图片
 uploads/
