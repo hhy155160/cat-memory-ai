@@ -4,6 +4,13 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  /**
+   * 关闭 Next 内置的响应 gzip 压缩。
+   * 原因：浏览器请求会自动携带 Accept-Encoding: gzip，而压缩层会把 SSE 的
+   * 小数据帧攒起来（直到流结束才一次性发出），导致聊天回答无法"逐字"渲染。
+   * 关闭后 SSE 帧即产即达；API 响应体量小，压缩收益可忽略。
+   */
+  compress: false,
   turbopack: {
     rules: {
       "*.css": {

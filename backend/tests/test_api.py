@@ -91,6 +91,54 @@ class TestUploadMemory:
         assert resp.status_code == 422
 
 
+class TestChatStreamSSE:
+    """GET /chat/stream：SSE 协议流式问答（大模型调用 mock，不联网）"""
+
+    def test_sse_without_api_key_returns_503(self, monkeypatch):
+        """未配置大模型客户端 → 503（SSE 握手前就失败，前端 EventSource 触发 onerror）"""
+        from routers import chat as chat_router
+        monkeypatch.setattr(chat_router, "llm_client", None)
+        resp = client.get("/chat/stream", params={"question": "你好"})
+        assert resp.status_code == 503
+
+    def test_sse_stream_format(self, isolated_store, monkeypatch):
+        """
+        mock 流式生成 → 校验 SSE 帧格式：
+        - 每帧 data: 前缀 + 空行分隔
+        - 内容完整拼接
+        - 以 data: [DONE] 结束
+        """
+        from routers import chat as chat_router
+
+        def fake_stream(question, memories):
+            assert any("毛线球" in m for m in memories)  # RAG 检索上下文生效
+            yield "小猫"
+            yield "爱玩\n毛线球"  # 含换行：验证多行被拆成多个 data: 行
+
+        monkeypatch.setattr(chat_router, "stream_answer", fake_stream)
+
+        client.post(
+            "/upload-memory",
+            files={"file": ("cat.png", make_png(), "image/png")},
+            data={"note": "小猫爱玩毛线球"},
+        )
+
+        resp = client.get("/chat/stream", params={"question": "小猫爱玩什么"})
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/event-stream")
+
+        raw = resp.text
+        assert raw.endswith("data: [DONE]\n\n")           # 结束标记
+        assert "data: 小猫\n\n" in raw                     # 单行帧
+        assert "data: 爱玩\ndata: 毛线球\n\n" in raw        # 多行拆帧
+        assert "[DONE]" not in raw.replace("data: [DONE]", "")  # DONE 只出现一次
+
+    def test_sse_empty_question_rejected(self):
+        """空问题 → 422（Query min_length 校验）"""
+        resp = client.get("/chat/stream", params={"question": ""})
+        assert resp.status_code == 422
+
+
 class TestChat:
     """POST /chat：流式问答（大模型调用 mock，不联网）"""
 
